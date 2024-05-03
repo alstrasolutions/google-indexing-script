@@ -11,7 +11,7 @@ import {
 import { getSitemapPages } from "./shared/sitemap";
 import { Status } from "./shared/types";
 import { batch, parseCommandLineArgs } from "./shared/utils";
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, appendFileSync } from "fs";
 import path from "path";
 
 const CACHE_TIMEOUT = 1000 * 60 * 60 * 24 * 14; // 14 days
@@ -52,6 +52,7 @@ export const index = async (
   let siteUrl = convertToSiteUrl(input);
   console.log(`🔎 Processing site: ${siteUrl}`);
   const cachePath = path.join(".cache", `${convertToFilePath(siteUrl)}.json`);
+  const alreadyRequestedPath = path.join(".cache", "already_requested.txt");
 
   if (!accessToken) {
     console.error("❌ Failed to get access token, check your service account credentials.");
@@ -101,8 +102,14 @@ export const index = async (
     return shouldIndexIt || isOld;
   };
 
+  const alreadyRequestedUrls = existsSync(alreadyRequestedPath)
+    ? new Set(readFileSync(alreadyRequestedPath, "utf8").split("\n").filter(Boolean))
+    : new Set();
+
   await batch(
     async (url) => {
+      if (alreadyRequestedUrls.has(url)) return;
+
       let result = statusPerUrl[url];
       if (!result || shouldRecheck(result.status, result.lastCheckedAt)) {
         const status = await getPageIndexingStatus(accessToken, siteUrl, url);
@@ -151,6 +158,7 @@ export const index = async (
       console.log("🚀 Indexing requested successfully. It may take a few days for Google to process it.");
     } else if (status < 400) {
       console.log(`🕛 Indexing already requested previously. It may take a few days for Google to process it.`);
+      appendFileSync(alreadyRequestedPath, `${url}\n`);
     }
     console.log(``);
   }
