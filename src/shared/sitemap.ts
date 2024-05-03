@@ -41,10 +41,10 @@ async function getSitemapsList(accessToken: string, siteUrl: string) {
 }
 
 /**
- * Retrieves a list of pages from all sitemaps associated with the specified site URL.
+ * Retrieves a list of pages from all sitemaps associated with the specified site URL and returns them in random order.
  * @param accessToken The access token for authentication.
  * @param siteUrl The URL of the site for which to retrieve the sitemap pages.
- * @returns An array containing the list of sitemaps and an array of unique page URLs extracted from those sitemaps.
+ * @returns An array containing the list of sitemaps and an array of unique page URLs extracted from those sitemaps in random order.
  */
 export async function getSitemapPages(accessToken: string, siteUrl: string) {
   const sitemaps = await getSitemapsList(accessToken, siteUrl);
@@ -59,5 +59,8 @@ export async function getSitemapPages(accessToken: string, siteUrl: string) {
     pages = [...pages, ...sites];
   }
 
-  return [sitemaps, [...new Set(pages)]];
+  // Shuffle the array of pages to return them in random order
+  const shuffledPages = [...new Set(pages)].sort(() => 0.5 - Math.random());
+
+  return [sitemaps, shuffledPages];
 }
