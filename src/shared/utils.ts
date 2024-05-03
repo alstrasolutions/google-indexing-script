@@ -35,12 +35,22 @@ export async function batch(
  * @returns A Promise resolving to the fetched response.
  * @throws Error when retries are exhausted or server error occurs.
  */
+// modified by https://github.com/goenning/google-indexing-script/issues/45
 export async function fetchRetry(url: string, options: RequestInit, retries: number = 5) {
   try {
     const response = await fetch(url, options);
     if (response.status >= 500) {
       const body = await response.text();
       throw new Error(`Server error code ${response.status}\n${body}`);
+    }
+
+    if (response.status === 429) {
+      console.log("Rate limited. Retrying in 60 seconds...");
+      // Retry after 60 seconds if rate limited
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+
+      // Retry the request ignoring the retries limit
+      return fetchRetry(url, options, retries);
     }
     return response;
   } catch (err) {
